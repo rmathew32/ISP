@@ -90,10 +90,6 @@ int main()
 					+ *(rgb16_buffer + (((i+1+1)*width) + (j-1+1)))
 					+ *(rgb16_buffer + (((i+1+1)*width) + (j+1+1))))/4;
 
-      //*(rgb16_buffer + ((i*height)+j))
-    }
-  }
-
 			//*(rgb16_buffer + ((i*height)+j))
 		}
 	}
@@ -105,7 +101,7 @@ int main()
 	R_8channel = malloc(rgb16_size/2);
 	G_8channel = malloc(rgb16_size/2);
 	B_8channel = malloc(rgb16_size/2);
-	
+
 	for (i = 0; i < height; i++) {
 		for (j = 0; j < width; j++) {
 			*(R_8channel + (i*width) + j) = (unsigned char)((*(R_channel + (i*width) + j)) >> 2);
