@@ -11,7 +11,7 @@ int main()
 	/*Reading File and finding size(3136 x 4224 x 10 bit BGGR)*/
 	FILE *raw_image;
 	long int raw_size;
-	raw_image = fopen("IMG_20180314_215440.raw","rb");
+	raw_image = fopen("IMG_Guitar.raw","rb");
 	fseek(raw_image, 0L, SEEK_END);
 	raw_size = ftell(raw_image);
 	rewind(raw_image);
