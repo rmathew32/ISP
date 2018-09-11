@@ -13,9 +13,6 @@ int main()
 	FILE *raw_image;
 	long int raw_size;
 	raw_image = fopen("IMG_Guitar.raw","rb");
-	//raw_image = fopen("IMG_Wall.raw","rb");
-	//raw_image = fopen("Own.raw","rb");
-	//raw_image = fopen("IMG_Plane.raw","rb");
 	fseek(raw_image, 0L, SEEK_END);
 	raw_size = ftell(raw_image);
 	rewind(raw_image);
@@ -31,24 +28,15 @@ int main()
 	long int rgb16_size = (raw_size * 2 * 4) / 5;
 	long int write_size = width*height*2;
 	unsigned short temp[5];
-#if 0
-	temp[0] = 255; 
-	temp[1] = 255;
-	temp[2] = 255; 
-	temp[3] = 255;
-	temp[4] = 255;
-#endif	
 	long int i,j;
 	rgb16_buffer = malloc(rgb16_size); 
 	for (i = 0, j = 0; i < raw_size; i += 5, j += 4)
 	{
-#if 1
 		temp[0] = *(mipi_buffer + (i + 0)); 
 		temp[1] = *(mipi_buffer + (i + 1)); 
 		temp[2] = *(mipi_buffer + (i + 2)); 
 		temp[3] = *(mipi_buffer + (i + 3)); 
 		temp[4] = *(mipi_buffer + (i + 4));
-#endif
 		*(rgb16_buffer + 0 + j) = (( temp[0] << 2 ) | ((temp[4] & 0x03) >> 0)) & 0x03FF; 
 		*(rgb16_buffer + 1 + j) = (( temp[1] << 2 ) | ((temp[4] & 0x0C) >> 2)) & 0x03FF; 
 		*(rgb16_buffer + 2 + j) = (( temp[2] << 2 ) | ((temp[4] & 0x30) >> 4)) & 0x03FF; 
@@ -122,23 +110,51 @@ int main()
 		}
 	}
 
-	/*Color Correction(for subtracting out the overlap in light colors in pixels, due to imperfections of BAYER filters*/
-	
+  /*From here on Only one set of buffers will be used. Local variables should be declared for processing and after that output should go to <Color>_8channel variable*/
+	float pixR;
+	float pixG;
+	float pixB;
+
+  /*Color Correction(for subtracting out the overlap in light colors in pixels, due to imperfections of color pixels or BAYER filters*/
+  float CCM[3][3] = {{ 1.7858,-0.7494,-0.0364},
+                     {-0.1317, 1.2090,-0.0773},
+                     {-0.0400,-0.7876, 1.7476}};
+  for (i = 0; i < height; i++) {
+    for (j = 0; j < width; j++) {
+			pixR = (float)(*(R_8channel + (i*width) + j));
+			pixG = (float)(*(B_8channel + (i*width) + j));
+			pixB = (float)(*(G_8channel + (i*width) + j));
+			*(R_8channel + (i*width) + j) = pixR*CCM[0][0] + pixG*CCM[0][1] + pixB*CCM[0][2];
+			*(G_8channel + (i*width) + j) = pixR*CCM[1][0] + pixG*CCM[1][1] + pixB*CCM[1][2];
+			*(B_8channel + (i*width) + j) = pixR*CCM[2][0] + pixG*CCM[2][1] + pixB*CCM[2][2];
+    }
+  }
 
 	/*Gamma Correction*/
-	float gammaCorrection = 0.7;
+	float gammaCorrection = 1.5;
 	float gamma = 1/gammaCorrection;
-	float R_corr;
-	float G_corr;
-	float B_corr;
 	for (i = 0; i < height; i++) {
 		for (j = 0; j < width; j++) {
-			float R_corr = (float)(*(R_8channel + (i*width) + j));
-			float G_corr = (float)(*(B_8channel + (i*width) + j));
-			float B_corr = (float)(*(G_8channel + (i*width) + j));
-			*(R_8channel + (i*width) + j) = 255 * pow(R_corr/255 , gamma);
-			*(G_8channel + (i*width) + j) = 255 * pow(G_corr/255 , gamma);
-			*(B_8channel + (i*width) + j) = 255 * pow(B_corr/255 , gamma);
+			pixR = (float)(*(R_8channel + (i*width) + j));
+			pixG = (float)(*(B_8channel + (i*width) + j));
+			pixB = (float)(*(G_8channel + (i*width) + j));
+			*(R_8channel + (i*width) + j) = 255 * pow(pixR/255 , gamma);
+			*(G_8channel + (i*width) + j) = 255 * pow(pixG/255 , gamma);
+			*(B_8channel + (i*width) + j) = 255 * pow(pixB/255 , gamma);
+		}
+	}
+
+  /*White Balance*/
+  float R2G = 1.00;
+  float B2G = 1.00;
+	for (i = 0; i < height; i++) {
+		for (j = 0; j < width; j++) {
+			pixR = (float)(*(R_8channel + (i*width) + j));
+			pixG = (float)(*(B_8channel + (i*width) + j));
+			pixB = (float)(*(G_8channel + (i*width) + j));
+			*(R_8channel + (i*width) + j) = pixR/R2G;
+			*(G_8channel + (i*width) + j) = pixG;
+			*(B_8channel + (i*width) + j) = pixB/B2G;
 		}
 	}
 
@@ -202,7 +218,9 @@ int main()
 	free(rgb16_buffer);
 	free(mipi_buffer);
 
+  /*JPEG Convertion*/
 	system("ffmpeg -s 4224x3136 -pix_fmt nv12 -i Out.yuv guitar.jpg");
+
 	/*Success*/
 	return 1;
 }
