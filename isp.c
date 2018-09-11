@@ -121,8 +121,8 @@ int main()
      * in light colors in pixels, due to imperfections 
      * of color pixels or BAYER filters*/
     float CCM[3][3] = {{ 1.7858,-0.7494,-0.0364},
-        {-0.1317, 1.2090,-0.0773},
-        {-0.0400,-0.7876, 1.7476}};
+                       {-0.1317, 1.2090,-0.0773},
+                       {-0.0400,-0.7876, 1.7476}};
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             pixR = (float)(*(R_8channel + (i*width) + j));
