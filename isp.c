@@ -117,6 +117,66 @@ int main()
     float pixG;
     float pixB;
 
+    /*Noise Reduction using Median Filter*/
+    short int window_size[2] = {1,1};
+    short int window_height = window_size[0];
+    short int window_width = window_size[1];
+    short int window_R[window_height*window_width];
+    short int window_G[window_height*window_width];
+    short int window_B[window_height*window_width];
+    short int w,x,y;
+    short int p, key, q, n;
+    n = window_height * window_width;
+    for (i = window_height/2; i <= height - window_height/2; i++) {
+        for (j = window_width/2; j <= width - window_width/2; j++) {
+            w = 0; 
+            for (x = i - window_height/2; x <= i + window_height/2; x++) { 
+                for (y = i - window_width/2; y <= i + window_width/2; y++) {
+                    window_R[w] = *(R_8channel + (x*width) + y);
+                    window_G[w] = *(G_8channel + (x*width) + y);
+                    window_B[w] = *(B_8channel + (x*width) + y);
+                    w++;
+                }
+            }
+            /*Insertion sort implemeted*/
+            for (p = 1; p < n; p++)
+            {
+                /*R channel sort*/
+                key = window_R[p];
+                q = p-1;
+                while (q >= 0 && window_R[q] > key)
+                {
+                    window_R[q+1] = window_R[q];
+                    q = q-1;
+                }
+                window_R[q+1] = key;
+                /*G channel sort*/
+                key = window_G[p];
+                q = p-1;
+                while (q >= 0 && window_G[q] > key)
+                {
+                    window_G[q+1] = window_G[q];
+                    q = q-1;
+                }
+                window_G[q+1] = key;
+                /*B channel sort*/
+                key = window_B[p];
+                q = p-1;
+                while (q >= 0 && window_B[q] > key)
+                {
+                    window_B[q+1] = window_B[q];
+                    q = q-1;
+                }
+                window_B[q+1] = key;
+            }
+
+            *(R_8channel + (i*width) + j) = window_R[window_height*window_width/2];
+            *(G_8channel + (i*width) + j) = window_G[window_height*window_width/2];
+            *(B_8channel + (i*width) + j) = window_B[window_height*window_width/2];
+        }
+    }
+            
+
     /*Color Correction(for subtracting out the overlap 
      * in light colors in pixels, due to imperfections 
      * of color pixels or BAYER filters*/
