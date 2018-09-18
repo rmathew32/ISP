@@ -5,12 +5,14 @@
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
+    uint8 true = 1;
+    uint8 false = 0;
 
 long int findImageSize(char *fileName);
 uint8 readImage(char* fileName, int width, int height,
     uint8 *mipi_buffer);
 uint8 decodeMIPItoWord(int width, int height,
-    int bitdepth, uint8 *mipi_buffer,
+    int bitDepth, uint8 *mipi_buffer,
     uint16 *rgb16_buffer);
 uint8 demosaicImageData(int width, int height,
     uint16 *rgb16_buffer,
@@ -21,7 +23,7 @@ uint8 convertRGBto8bit(int width, int height,
 uint8 reduceNoise(int width, int height,
     int window_height, int window_width,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
-uint8 correctColors(int width, int height, float *CCM,
+uint8 correctColors(int width, int height, float **CCM,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
 uint8 correctGamma(int width, int height, float gammaValue,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
@@ -42,27 +44,38 @@ int main(int argv, char *argc[])
     int width = 4224;
     int height = 3136;
     int bitDepth = 10;
+
+    float CCM[][3] = {{ 1.7858,-0.7494,-0.0364},
+                       {-0.1317, 1.2090,-0.0773},
+                       {-0.0400,-0.7876, 1.7476}};
+
+    float R2G = 1.00;
+    float B2G = 1.00;
+    float gammaValue = 1.5;
+
     long int raw_size;
+    raw_size = findImageSize(fileName);
+    if (raw_size == false)
+        printf("\nNo image found");
 
-    raw_size = findImageSize(char *fileName);
-
+    uint8 *mipi_buffer;
     mipi_buffer = malloc(raw_size);
-    uint8 readImage(char* fileName, int width, int height,
-        uint8 *mipi_buffer);
+    if (false == readImage(fileName, width, height, mipi_buffer))
+        printf("\nError in reading Image File");
 
     uint16 *rgb16_buffer;
+    long int rgb16_size = (raw_size * 2 * 4) / 5;
     rgb16_buffer = malloc(rgb16_size);
-    uint8 decodeMIPItoWord(int width, int height,
-        int bitdepth, uint8 *mipi_buffer,
-        uint16 *rgb16_buffer);
+    if (false == decodeMIPItoWord(width, height, bitDepth, mipi_buffer, rgb16_buffer))
+        printf("\nError in Decoding MIPI");
 
-    uint16 *R_channel, uint16 *G_channel, uint16 *B_channel;
+    uint16 *R_channel, *G_channel, *B_channel;
     R_channel = malloc(rgb16_size);
     G_channel = malloc(rgb16_size);
     B_channel = malloc(rgb16_size);
-    uint8 demosaicImageData(int width, int height,
-        uint16 *rgb16_buffer,
-        uint16 *R_channel, uint16 *G_channel, uint16 *B_channel);
+    if (false == demosaicImageData(width, height, rgb16_buffer,
+        R_channel, G_channel, B_channel))
+        printf("\nError in Demosaic");
 
     unsigned char *R_8channel;
     unsigned char *G_8channel;
@@ -70,9 +83,10 @@ int main(int argv, char *argc[])
     R_8channel = malloc(rgb16_size/2);
     G_8channel = malloc(rgb16_size/2);
     B_8channel = malloc(rgb16_size/2);
-    uint8 convertRGBto8bit(int width, int height,
-        uint16 *R_channel, uint16 *G_channel, uint16 *B_channel,
-        uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
+    if (false == convertRGBto8bit(width, height,
+        R_channel, G_channel, B_channel,
+        R_8channel, G_8channel, B_8channel))
+        printf("\nError in Convertion to 8 bit");
 
     /*Noise Reduction using Median Filter*/
     short int window_size[2] = {1,1};
@@ -84,26 +98,31 @@ int main(int argv, char *argc[])
     short int w,x,y;
     short int p, key, q, n;
     n = window_height * window_width;
-    uint8 reduceNoise(int width, int height,
-        int window_height, int window_width,
-        uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
+    if (false == reduceNoise(width, height,
+        window_height, window_width,
+        R_8channel, G_8channel, B_8channel))
+        printf("\nError in reducing Noise");
 
-    uint8 correctColors(int width, int height, float *CCM,
-        uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
+    if (false == correctColors(width, height, CCM,
+        R_8channel, G_8channel, B_8channel))
+        printf("\nError in color correction");
 
-    uint8 correctGamma(int width, int height, float gammaValue,
-        uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
+    if (false == correctGamma(width, height, gammaValue,
+        R_8channel, G_8channel, B_8channel))
+        printf("\nError in gamma correction");
 
-    uint8 balanceWhite(int width, int height, float r2g, float b2g,
-        uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
+    if (false == balanceWhite(width, height, R2G, B2G,
+        R_8channel, G_8channel, B_8channel))
+        printf("\n Error in white balance");
 
     unsigned char *Y_channel,*U_channel,*V_channel;
     Y_channel = malloc(rgb16_size/2);
     U_channel = malloc(rgb16_size/2);
     V_channel = malloc(rgb16_size/2);
-    uint8 convert2YUV444(int width, int height,
-        uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel,
-        uint8 *Y_channel, uint8 *U_channel, uint8 *V_channel);
+    if (false == convert2YUV444(width, height,
+        R_8channel, G_8channel, B_8channel,
+        Y_channel, U_channel, V_channel))
+        printf("\nError in YUV444 convertion");
 
     unsigned char *Y_420;
     unsigned char *UV_420;
@@ -119,12 +138,6 @@ int main(int argv, char *argc[])
 
 
 
-    /*From here on Only one set of buffers will be used.
-     * Local variables should be declared for processing and 
-     * after that output should go to <Color>_8channel variable*/
-    float pixR;
-    float pixG;
-    float pixB;
     /*Clear out all the memory*/
     free(R_8channel);
     free(G_8channel);
@@ -177,13 +190,12 @@ uint8 readImage(char* fileName, int width, int height,
 }
 
 uint8 decodeMIPItoWord(int width, int height,
-    int bitdepth, uint8 *mipi_buffer,
+    int bitDepth, uint8 *mipi_buffer,
     uint16 *rgb16_buffer)
 {
     /*Convert mipi into 16bitBayer RGB*/
     long int raw_size = sizeof(mipi_buffer);
     long int rgb16_size = (raw_size * 2 * 4) / 5;
-    long int write_size = width*height*2;
     unsigned short temp[5];
     long int i,j;
     for (i = 0, j = 0; i < raw_size; i += 5, j += 4)
@@ -205,6 +217,7 @@ uint8 demosaicImageData(int width, int height,
     uint16 *rgb16_buffer,
     uint16 *R_channel, uint16 *G_channel, uint16 *B_channel)
 {
+    int i,j;
     /*Demosaic*/
     for(i = 0; i < height; i+=2) {
         for(j = 0; j < width; j+=2) {
@@ -256,6 +269,7 @@ uint8 convertRGBto8bit(int width, int height,
     uint16 *R_channel, uint16 *G_channel, uint16 *B_channel,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
+    int i,j;
     /*RGB888 Conversion*/
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
@@ -322,15 +336,19 @@ uint8 reduceNoise(int width, int height,
 #endif
 }
 
-uint8 correctColors(int width, int height, float *CCM,
+uint8 correctColors(int width, int height, float **CCM,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
     /*Color Correction(for subtracting out the overlap 
      * in light colors in pixels, due to imperfections 
      * of color pixels or BAYER filters*/
-    float CCM[3][3] = {{ 1.7858,-0.7494,-0.0364},
-                       {-0.1317, 1.2090,-0.0773},
-                       {-0.0400,-0.7876, 1.7476}};
+    /*From here on Only one set of buffers will be used.
+     * Local variables should be declared for processing and 
+     * after that output should go to <Color>_8channel variable*/
+    int i,j;
+    float pixR;
+    float pixG;
+    float pixB;
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             pixR = (float)(*(R_8channel + (i*width) + j));
@@ -348,9 +366,15 @@ uint8 correctColors(int width, int height, float *CCM,
 uint8 correctGamma(int width, int height, float gammaValue,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
+    /*From here on Only one set of buffers will be used.
+     * Local variables should be declared for processing and 
+     * after that output should go to <Color>_8channel variable*/
+    int i,j;
+    float pixR;
+    float pixG;
+    float pixB;
     /*Gamma Correction*/
-    float gammaCorrection = 1.5;
-    float gamma = 1/gammaCorrection;
+    float gamma = 1/gammaValue;
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             pixR = (float)(*(R_8channel + (i*width) + j));
@@ -364,12 +388,17 @@ uint8 correctGamma(int width, int height, float gammaValue,
 
 
 }
-uint8 balanceWhite(int width, int height, float r2g, float b2g,
+uint8 balanceWhite(int width, int height, float R2G, float B2G,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
+    /*From here on Only one set of buffers will be used.
+     * Local variables should be declared for processing and 
+     * after that output should go to <Color>_8channel variable*/
+    int i,j;
+    float pixR;
+    float pixG;
+    float pixB;
     /*White Balance*/
-    float R2G = 1.00;
-    float B2G = 1.00;
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             pixR = (float)(*(R_8channel + (i*width) + j));
@@ -387,6 +416,7 @@ uint8 convert2YUV444(int width, int height,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel,
     uint8 *Y_channel, uint8 *U_channel, uint8 *V_channel)
 {
+    int i,j;
     /*YUV convertion*/
     for(i = 0; i < height; i++) {
         for(j = 0; j < width; j++) {
@@ -409,6 +439,7 @@ uint8 subsample2YUV420(int width, int height,
     uint8 *Y_channel, uint8 *U_channel, uint8 *V_channel,
     uint8 *Y_420, uint8 *UV_420)
 {
+    int i,j;
     /*YUV 420 creation*/
     for (i = 0; i < height; i+=2) {
         for (j = 0; j < width; j+=2) {
@@ -425,6 +456,7 @@ uint8 writeFinalYUVImage(int width, int height,
     uint8 *Y_420, uint8 *UV_420)
 {
     /*Writing final image*/
+    long int write_size = width*height*2;
     FILE *out_image;
     out_image = fopen("Out.yuv","wb");
     //fwrite(rgb16_buffer,sizeof(char),write_size,out_image);
