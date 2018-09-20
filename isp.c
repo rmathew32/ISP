@@ -25,7 +25,7 @@ uint8 reduceNoise(int width, int height,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
 uint8 correctColors(int width, int height, float *CCM,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
-uint8 correctGamma(int width, int height, float gammaValue,
+uint8 correctGamma(int width, int height, float gammaRValue, float gammaGValue, float gammaBValue,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
 uint8 balanceWhite(int width, int height, float r2g, float b2g,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
@@ -46,21 +46,23 @@ int main(int argv, char *argc[])
     int bitDepth = 10;
 
     float CCM[9] = { 1.1000,-0.0500,-0.0500,
-                    -0.1000, 1.3000,-0.2000,
-                    -0.2000,-0.1000, 1.3000};
+                    -0.1000, 1.2000,-0.1000,
+                    -0.0000,-0.0000, 1.0000};
 
 /*    float CCM[9] = {1,0,0,
                     0,1,0,
                     0,0,1};
 */
-    float gammaValue = 2.5;
+    float gammaRValue = 2.5;
+    float gammaGValue = 2.5;
+    float gammaBValue = 2.5;
 
     short int window_size[2] = {3,3};
     short int window_height = window_size[0];
     short int window_width = window_size[1];
 
-    float R2G = 1.30;
-    float B2G = 1.30;
+    float R2G = 1.00;
+    float B2G = 1.00;
 
     long int raw_size;
     raw_size = findImageSize(fileName);
@@ -108,7 +110,7 @@ int main(int argv, char *argc[])
         R_8channel, G_8channel, B_8channel))
         printf("\nError in color correction");
 
-    if (False == correctGamma(width, height, gammaValue,
+    if (False == correctGamma(width, height, gammaRValue, gammaGValue, gammaBValue,
         R_8channel, G_8channel, B_8channel))
         printf("\nError in gamma correction");
 
@@ -359,8 +361,8 @@ uint8 correctColors(int width, int height, float *CCM,
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             pixR = (float)(*(R_8channel + (i*width) + j));
-            pixG = (float)(*(B_8channel + (i*width) + j));
-            pixB = (float)(*(G_8channel + (i*width) + j));
+            pixG = (float)(*(G_8channel + (i*width) + j));
+            pixB = (float)(*(B_8channel + (i*width) + j));
             *(R_8channel + (i*width) + j) = pixR*CCM[0] + pixG*CCM[1] + pixB*CCM[2];
             *(G_8channel + (i*width) + j) = pixR*CCM[3] + pixG*CCM[4] + pixB*CCM[5];
             *(B_8channel + (i*width) + j) = pixR*CCM[6] + pixG*CCM[7] + pixB*CCM[8];
@@ -369,7 +371,7 @@ uint8 correctColors(int width, int height, float *CCM,
     return True;
 };
 
-uint8 correctGamma(int width, int height, float gammaValue,
+uint8 correctGamma(int width, int height, float gammaRValue, float gammaGValue, float gammaBValue,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
     /*From here on Only one set of buffers will be used.
@@ -380,15 +382,17 @@ uint8 correctGamma(int width, int height, float gammaValue,
     float pixG;
     float pixB;
     /*Gamma Correction*/
-    float gamma = 1/gammaValue;
+    float gammaR = 1/gammaRValue;
+    float gammaG = 1/gammaGValue;
+    float gammaB = 1/gammaBValue;
     for (i = 0; i < height; i++) {
         for (j = 0; j < width; j++) {
             pixR = (float)(*(R_8channel + (i*width) + j));
             pixG = (float)(*(B_8channel + (i*width) + j));
             pixB = (float)(*(G_8channel + (i*width) + j));
-            *(R_8channel + (i*width) + j) = 255 * pow(pixR/255 , gamma);
-            *(G_8channel + (i*width) + j) = 255 * pow(pixG/255 , gamma);
-            *(B_8channel + (i*width) + j) = 255 * pow(pixB/255 , gamma);
+            *(R_8channel + (i*width) + j) = 255 * pow(pixR/255 , gammaR);
+            *(G_8channel + (i*width) + j) = 255 * pow(pixG/255 , gammaG);
+            *(B_8channel + (i*width) + j) = 255 * pow(pixB/255 , gammaB);
         }
     }
     return True;
