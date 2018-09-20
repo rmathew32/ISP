@@ -5,13 +5,13 @@
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
-    uint8 true = 1;
-    uint8 false = 0;
+uint8 true = 1;
+uint8 false = 0;
 
 long int findImageSize(char *fileName);
-uint8 readImage(char* fileName, int width, int height,
+uint8 readImage(char* fileName, long int raw_size, int width, int height,
     uint8 *mipi_buffer);
-uint8 decodeMIPItoWord(int width, int height,
+uint8 decodeMIPItoWord(int width, int height, long int raw_size,
     int bitDepth, uint8 *mipi_buffer,
     uint16 *rgb16_buffer);
 uint8 demosaicImageData(int width, int height,
@@ -23,7 +23,7 @@ uint8 convertRGBto8bit(int width, int height,
 uint8 reduceNoise(int width, int height,
     int window_height, int window_width,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
-uint8 correctColors(int width, int height, float **CCM,
+uint8 correctColors(int width, int height, float *CCM,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
 uint8 correctGamma(int width, int height, float gammaValue,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel);
@@ -45,9 +45,9 @@ int main(int argv, char *argc[])
     int height = 3136;
     int bitDepth = 10;
 
-    float CCM[][3] = {{ 1.7858,-0.7494,-0.0364},
-                       {-0.1317, 1.2090,-0.0773},
-                       {-0.0400,-0.7876, 1.7476}};
+    float CCM[9] = { 1.7858,-0.7494,-0.0364,
+                       -0.1317, 1.2090,-0.0773,
+                       -0.0400,-0.7876, 1.7476};
 
     float R2G = 1.00;
     float B2G = 1.00;
@@ -57,16 +57,17 @@ int main(int argv, char *argc[])
     raw_size = findImageSize(fileName);
     if (raw_size == false)
         printf("\nNo image found");
+    printf("\nImage Size = %ld",raw_size);
 
     uint8 *mipi_buffer;
     mipi_buffer = malloc(raw_size);
-    if (false == readImage(fileName, width, height, mipi_buffer))
+    if (false == readImage(fileName, raw_size, width, height, mipi_buffer))
         printf("\nError in reading Image File");
 
     uint16 *rgb16_buffer;
     long int rgb16_size = (raw_size * 2 * 4) / 5;
     rgb16_buffer = malloc(rgb16_size);
-    if (false == decodeMIPItoWord(width, height, bitDepth, mipi_buffer, rgb16_buffer))
+    if (false == decodeMIPItoWord(width, height, raw_size, bitDepth, mipi_buffer, rgb16_buffer))
         printf("\nError in Decoding MIPI");
 
     uint16 *R_channel, *G_channel, *B_channel;
@@ -89,19 +90,13 @@ int main(int argv, char *argc[])
         printf("\nError in Convertion to 8 bit");
 
     /*Noise Reduction using Median Filter*/
-    short int window_size[2] = {1,1};
+/*    short int window_size[2] = {1,1};
     short int window_height = window_size[0];
     short int window_width = window_size[1];
-    short int window_R[window_height*window_width];
-    short int window_G[window_height*window_width];
-    short int window_B[window_height*window_width];
-    short int w,x,y;
-    short int p, key, q, n;
-    n = window_height * window_width;
     if (false == reduceNoise(width, height,
         window_height, window_width,
         R_8channel, G_8channel, B_8channel))
-        printf("\nError in reducing Noise");
+       printf("\nError in reducing Noise");
 
     if (false == correctColors(width, height, CCM,
         R_8channel, G_8channel, B_8channel))
@@ -114,7 +109,7 @@ int main(int argv, char *argc[])
     if (false == balanceWhite(width, height, R2G, B2G,
         R_8channel, G_8channel, B_8channel))
         printf("\n Error in white balance");
-
+*/
     unsigned char *Y_channel,*U_channel,*V_channel;
     Y_channel = malloc(rgb16_size/2);
     U_channel = malloc(rgb16_size/2);
@@ -139,6 +134,8 @@ int main(int argv, char *argc[])
 
 
     /*Clear out all the memory*/
+    free(Y_420);
+    free(UV_420);
     free(R_8channel);
     free(G_8channel);
     free(B_8channel);
@@ -169,32 +166,27 @@ long int findImageSize(char* fileName)
     raw_size = ftell(raw_image);
     fclose(raw_image);
     return(raw_size);
-}
-uint8 readImage(char* fileName, int width, int height,
+};
+uint8 readImage(char* fileName, long int raw_size, int width, int height,
     uint8 *mipi_buffer)
 {
-    long int raw_size;
     FILE* raw_image;
     /*Reading File and finding size(3136 x 4224 x 10 bit BGGR)*/
     raw_image = fopen(fileName,"rb");
     if ( raw_image == NULL)
       return false;
-    fseek(raw_image, 0L, SEEK_END);
-    raw_size = ftell(raw_image);
-    rewind(raw_image);
     /*Read raw contents into mipi_buffer*/
     mipi_buffer = malloc(raw_size);
     fread(mipi_buffer,1,raw_size,raw_image);
     fclose(raw_image);
     return true;
-}
+};
 
-uint8 decodeMIPItoWord(int width, int height,
+uint8 decodeMIPItoWord(int width, int height, long int raw_size,
     int bitDepth, uint8 *mipi_buffer,
     uint16 *rgb16_buffer)
 {
     /*Convert mipi into 16bitBayer RGB*/
-    long int raw_size = sizeof(mipi_buffer);
     long int rgb16_size = (raw_size * 2 * 4) / 5;
     unsigned short temp[5];
     long int i,j;
@@ -210,7 +202,7 @@ uint8 decodeMIPItoWord(int width, int height,
         *(rgb16_buffer + 2 + j) = (( temp[2] << 2 ) | ((temp[4] & 0x30) >> 4)) & 0x03FF; 
         *(rgb16_buffer + 3 + j) = (( temp[3] << 2 ) | ((temp[4] & 0xC0) >> 6)) & 0x03FF;
     }
-}
+};
 
 
 uint8 demosaicImageData(int width, int height,
@@ -263,7 +255,7 @@ uint8 demosaicImageData(int width, int height,
 
         }
     }
-}
+};
 
 uint8 convertRGBto8bit(int width, int height,
     uint16 *R_channel, uint16 *G_channel, uint16 *B_channel,
@@ -278,13 +270,19 @@ uint8 convertRGBto8bit(int width, int height,
             *(B_8channel + (i*width) + j) = (unsigned char)((*(B_channel + (i*width) + j)) >> 2);
         }
     }
-}
+};
 
 uint8 reduceNoise(int width, int height,
     int window_height, int window_width,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
-#if 0
+    short int window_R[window_height*window_width];
+    short int window_G[window_height*window_width];
+    short int window_B[window_height*window_width];
+    short int w,x,y;
+    short int p, key, q, n;
+    int i,j;
+    n = window_height * window_width;
     for (i = window_height/2; i < height - window_height/2; i++) {
         for (j = window_width/2; j < width - window_width/2; j++) {
             w = 0;
@@ -333,10 +331,9 @@ uint8 reduceNoise(int width, int height,
             *(B_8channel + (i*width) + j) = window_B[window_height*window_width/2];
         }
     }
-#endif
-}
+};
 
-uint8 correctColors(int width, int height, float **CCM,
+uint8 correctColors(int width, int height, float *CCM,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
     /*Color Correction(for subtracting out the overlap 
@@ -354,14 +351,14 @@ uint8 correctColors(int width, int height, float **CCM,
             pixR = (float)(*(R_8channel + (i*width) + j));
             pixG = (float)(*(B_8channel + (i*width) + j));
             pixB = (float)(*(G_8channel + (i*width) + j));
-            *(R_8channel + (i*width) + j) = pixR*CCM[0][0] + pixG*CCM[0][1] + pixB*CCM[0][2];
-            *(G_8channel + (i*width) + j) = pixR*CCM[1][0] + pixG*CCM[1][1] + pixB*CCM[1][2];
-            *(B_8channel + (i*width) + j) = pixR*CCM[2][0] + pixG*CCM[2][1] + pixB*CCM[2][2];
+            *(R_8channel + (i*width) + j) = pixR*CCM[0] + pixG*CCM[1] + pixB*CCM[2];
+            *(G_8channel + (i*width) + j) = pixR*CCM[3] + pixG*CCM[4] + pixB*CCM[5];
+            *(B_8channel + (i*width) + j) = pixR*CCM[6] + pixG*CCM[7] + pixB*CCM[8];
         }
     }
 
 
-}
+};
 
 uint8 correctGamma(int width, int height, float gammaValue,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
@@ -387,7 +384,7 @@ uint8 correctGamma(int width, int height, float gammaValue,
     }
 
 
-}
+};
 uint8 balanceWhite(int width, int height, float R2G, float B2G,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
@@ -411,7 +408,7 @@ uint8 balanceWhite(int width, int height, float R2G, float B2G,
     }
 
 
-}
+};
 uint8 convert2YUV444(int width, int height,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel,
     uint8 *Y_channel, uint8 *U_channel, uint8 *V_channel)
@@ -433,7 +430,7 @@ uint8 convert2YUV444(int width, int height,
     }
 
 
-}
+};
 
 uint8 subsample2YUV420(int width, int height,
     uint8 *Y_channel, uint8 *U_channel, uint8 *V_channel,
@@ -447,11 +444,9 @@ uint8 subsample2YUV420(int width, int height,
             *(UV_420 + (i*width/2) + j + 1)  = *(V_channel + (i*width) + j);
         }
     }
-    free(Y_420);
-    free(UV_420);
 
 
-}
+};
 uint8 writeFinalYUVImage(int width, int height,
     uint8 *Y_420, uint8 *UV_420)
 {
@@ -468,5 +463,5 @@ uint8 writeFinalYUVImage(int width, int height,
     //fwrite(U_channel,sizeof(char),write_size/2,out_image);
     //fwrite(V_channel,sizeof(char),write_size/2,out_image);
     fclose(out_image);
-}
+};
 
