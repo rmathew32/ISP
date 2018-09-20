@@ -5,8 +5,8 @@
 
 typedef unsigned char uint8;
 typedef unsigned short uint16;
-uint8 true = 1;
-uint8 false = 0;
+uint8 True = 1;
+uint8 False = 0;
 
 long int findImageSize(char *fileName);
 uint8 readImage(char* fileName, long int raw_size, int width, int height,
@@ -51,30 +51,30 @@ int main(int argv, char *argc[])
 
     float R2G = 1.00;
     float B2G = 1.00;
-    float gammaValue = 1.5;
+    float gammaValue = 3.5;
 
     long int raw_size;
     raw_size = findImageSize(fileName);
-    if (raw_size == false)
+    if (raw_size == False)
         printf("\nNo image found");
-    printf("\nImage Size = %ld",raw_size);
+    printf("\nImage Size = %ld\n",raw_size);
 
     uint8 *mipi_buffer;
     mipi_buffer = malloc(raw_size);
-    if (false == readImage(fileName, raw_size, width, height, mipi_buffer))
+    if (False == readImage(fileName, raw_size, width, height, mipi_buffer))
         printf("\nError in reading Image File");
 
     uint16 *rgb16_buffer;
     long int rgb16_size = (raw_size * 2 * 4) / 5;
     rgb16_buffer = malloc(rgb16_size);
-    if (false == decodeMIPItoWord(width, height, raw_size, bitDepth, mipi_buffer, rgb16_buffer))
+    if (False == decodeMIPItoWord(width, height, raw_size, bitDepth, mipi_buffer, rgb16_buffer))
         printf("\nError in Decoding MIPI");
 
     uint16 *R_channel, *G_channel, *B_channel;
     R_channel = malloc(rgb16_size);
     G_channel = malloc(rgb16_size);
     B_channel = malloc(rgb16_size);
-    if (false == demosaicImageData(width, height, rgb16_buffer,
+    if (False == demosaicImageData(width, height, rgb16_buffer,
         R_channel, G_channel, B_channel))
         printf("\nError in Demosaic");
 
@@ -84,37 +84,37 @@ int main(int argv, char *argc[])
     R_8channel = malloc(rgb16_size/2);
     G_8channel = malloc(rgb16_size/2);
     B_8channel = malloc(rgb16_size/2);
-    if (false == convertRGBto8bit(width, height,
+    if (False == convertRGBto8bit(width, height,
         R_channel, G_channel, B_channel,
         R_8channel, G_8channel, B_8channel))
         printf("\nError in Convertion to 8 bit");
 
     /*Noise Reduction using Median Filter*/
-/*    short int window_size[2] = {1,1};
+    short int window_size[2] = {1,1};
     short int window_height = window_size[0];
     short int window_width = window_size[1];
-    if (false == reduceNoise(width, height,
+/*    if (False == reduceNoise(width, height,
         window_height, window_width,
         R_8channel, G_8channel, B_8channel))
        printf("\nError in reducing Noise");
-
-    if (false == correctColors(width, height, CCM,
+*/
+    if (False == correctColors(width, height, CCM,
         R_8channel, G_8channel, B_8channel))
         printf("\nError in color correction");
 
-    if (false == correctGamma(width, height, gammaValue,
+    if (False == correctGamma(width, height, gammaValue,
         R_8channel, G_8channel, B_8channel))
         printf("\nError in gamma correction");
 
-    if (false == balanceWhite(width, height, R2G, B2G,
+    if (False == balanceWhite(width, height, R2G, B2G,
         R_8channel, G_8channel, B_8channel))
         printf("\n Error in white balance");
-*/
+
     unsigned char *Y_channel,*U_channel,*V_channel;
     Y_channel = malloc(rgb16_size/2);
     U_channel = malloc(rgb16_size/2);
     V_channel = malloc(rgb16_size/2);
-    if (false == convert2YUV444(width, height,
+    if (False == convert2YUV444(width, height,
         R_8channel, G_8channel, B_8channel,
         Y_channel, U_channel, V_channel))
         printf("\nError in YUV444 convertion");
@@ -124,12 +124,14 @@ int main(int argv, char *argc[])
     Y_420 = malloc(rgb16_size/2);
     memcpy(Y_420,Y_channel,rgb16_size/2);
     UV_420 = malloc(rgb16_size/4);
-    uint8 subsample2YUV420(int width, int height,
-        uint8 *Y_channel, uint8 *U_channel, uint8 *V_channel,
-        uint8 *Y_420, uint8 *UV_420);
+    if (False == subsample2YUV420(width, height,
+        Y_channel, U_channel, V_channel,
+        Y_420, UV_420))
+      printf("\nError in Chroma Subsampling");
 
-    uint8 writeFinalYUVImage(int width, int height,
-        uint8 *Y_420, uint8 *UV_420);
+    if (False == writeFinalYUVImage(width, height,
+        Y_420, UV_420))
+      printf("\nError in writing final YUV");
 
 
 
@@ -161,7 +163,7 @@ long int findImageSize(char* fileName)
     /*Reading File and finding size(3136 x 4224 x 10 bit BGGR)*/
     raw_image = fopen(fileName,"rb");
     if ( raw_image == NULL)
-      return false;
+      return False;
     fseek(raw_image, 0L, SEEK_END);
     raw_size = ftell(raw_image);
     fclose(raw_image);
@@ -174,12 +176,11 @@ uint8 readImage(char* fileName, long int raw_size, int width, int height,
     /*Reading File and finding size(3136 x 4224 x 10 bit BGGR)*/
     raw_image = fopen(fileName,"rb");
     if ( raw_image == NULL)
-      return false;
+      return False;
     /*Read raw contents into mipi_buffer*/
-    mipi_buffer = malloc(raw_size);
     fread(mipi_buffer,1,raw_size,raw_image);
     fclose(raw_image);
-    return true;
+    return True;
 };
 
 uint8 decodeMIPItoWord(int width, int height, long int raw_size,
@@ -192,16 +193,17 @@ uint8 decodeMIPItoWord(int width, int height, long int raw_size,
     long int i,j;
     for (i = 0, j = 0; i < raw_size; i += 5, j += 4)
     {
-        temp[0] = *(mipi_buffer + (i + 0)); 
-        temp[1] = *(mipi_buffer + (i + 1)); 
-        temp[2] = *(mipi_buffer + (i + 2)); 
-        temp[3] = *(mipi_buffer + (i + 3)); 
+        temp[0] = *(mipi_buffer + (i + 0));
+        temp[1] = *(mipi_buffer + (i + 1));
+        temp[2] = *(mipi_buffer + (i + 2));
+        temp[3] = *(mipi_buffer + (i + 3));
         temp[4] = *(mipi_buffer + (i + 4));
-        *(rgb16_buffer + 0 + j) = (( temp[0] << 2 ) | ((temp[4] & 0x03) >> 0)) & 0x03FF; 
-        *(rgb16_buffer + 1 + j) = (( temp[1] << 2 ) | ((temp[4] & 0x0C) >> 2)) & 0x03FF; 
-        *(rgb16_buffer + 2 + j) = (( temp[2] << 2 ) | ((temp[4] & 0x30) >> 4)) & 0x03FF; 
+        *(rgb16_buffer + 0 + j) = (( temp[0] << 2 ) | ((temp[4] & 0x03) >> 0)) & 0x03FF;
+        *(rgb16_buffer + 1 + j) = (( temp[1] << 2 ) | ((temp[4] & 0x0C) >> 2)) & 0x03FF;
+        *(rgb16_buffer + 2 + j) = (( temp[2] << 2 ) | ((temp[4] & 0x30) >> 4)) & 0x03FF;
         *(rgb16_buffer + 3 + j) = (( temp[3] << 2 ) | ((temp[4] & 0xC0) >> 6)) & 0x03FF;
     }
+    return True;
 };
 
 
@@ -255,6 +257,7 @@ uint8 demosaicImageData(int width, int height,
 
         }
     }
+    return True;
 };
 
 uint8 convertRGBto8bit(int width, int height,
@@ -270,6 +273,7 @@ uint8 convertRGBto8bit(int width, int height,
             *(B_8channel + (i*width) + j) = (unsigned char)((*(B_channel + (i*width) + j)) >> 2);
         }
     }
+    return True;
 };
 
 uint8 reduceNoise(int width, int height,
@@ -331,6 +335,7 @@ uint8 reduceNoise(int width, int height,
             *(B_8channel + (i*width) + j) = window_B[window_height*window_width/2];
         }
     }
+    return True;
 };
 
 uint8 correctColors(int width, int height, float *CCM,
@@ -356,8 +361,7 @@ uint8 correctColors(int width, int height, float *CCM,
             *(B_8channel + (i*width) + j) = pixR*CCM[6] + pixG*CCM[7] + pixB*CCM[8];
         }
     }
-
-
+    return True;
 };
 
 uint8 correctGamma(int width, int height, float gammaValue,
@@ -382,9 +386,9 @@ uint8 correctGamma(int width, int height, float gammaValue,
             *(B_8channel + (i*width) + j) = 255 * pow(pixB/255 , gamma);
         }
     }
-
-
+    return True;
 };
+
 uint8 balanceWhite(int width, int height, float R2G, float B2G,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel)
 {
@@ -406,9 +410,9 @@ uint8 balanceWhite(int width, int height, float R2G, float B2G,
             *(B_8channel + (i*width) + j) = pixB/B2G;
         }
     }
-
-
+    return True;
 };
+
 uint8 convert2YUV444(int width, int height,
     uint8 *R_8channel, uint8 *G_8channel, uint8 *B_8channel,
     uint8 *Y_channel, uint8 *U_channel, uint8 *V_channel)
@@ -428,8 +432,7 @@ uint8 convert2YUV444(int width, int height,
                             - 18  * (*(B_8channel + (i*width) + j)))) >> 8);
         }
     }
-
-
+    return True;
 };
 
 uint8 subsample2YUV420(int width, int height,
@@ -444,9 +447,9 @@ uint8 subsample2YUV420(int width, int height,
             *(UV_420 + (i*width/2) + j + 1)  = *(V_channel + (i*width) + j);
         }
     }
-
-
+    return True;
 };
+
 uint8 writeFinalYUVImage(int width, int height,
     uint8 *Y_420, uint8 *UV_420)
 {
@@ -454,6 +457,7 @@ uint8 writeFinalYUVImage(int width, int height,
     long int write_size = width*height*2;
     FILE *out_image;
     out_image = fopen("Out.yuv","wb");
+    printf("\nWriting to YUV420\n");
     //fwrite(rgb16_buffer,sizeof(char),write_size,out_image);
     //fwrite(R_8channel,sizeof(char),write_size/2,out_image);
     //fwrite(G_8channel,sizeof(char),write_size/2,out_image);
@@ -463,5 +467,6 @@ uint8 writeFinalYUVImage(int width, int height,
     //fwrite(U_channel,sizeof(char),write_size/2,out_image);
     //fwrite(V_channel,sizeof(char),write_size/2,out_image);
     fclose(out_image);
+    return True;
 };
 
