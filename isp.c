@@ -14,6 +14,9 @@ uint8 readImage(char* fileName, long int raw_size, int width, int height,
 uint8 decodeMIPItoWord(int width, int height, long int raw_size,
     int bitDepth, uint8 *mipi_buffer,
     long int rgb16_size, uint16 *rgb16_buffer);
+uint8 linearizeBayer(int width, int height,
+    int bitDepth, int offset,
+    long int rgb16_size, uint16 *rgb16_buffer);
 uint8 demosaicImageData(int width, int height,
     uint16 *rgb16_buffer,
     uint16 *R_channel, uint16 *G_channel, uint16 *B_channel);
@@ -44,6 +47,8 @@ int main(int argv, char *argc[])
     int width = 4224;
     int height = 3136;
     int bitDepth = 10;
+
+    int offset = -70;
 
     float CCM[9] = { 1.1000,-0.0500,-0.0500,
                     -0.1000, 1.2000,-0.1000,
@@ -80,6 +85,9 @@ int main(int argv, char *argc[])
     rgb16_buffer = malloc(rgb16_size);
     if (False == decodeMIPItoWord(width, height, raw_size, bitDepth, mipi_buffer, rgb16_size, rgb16_buffer))
         printf("\nError in Decoding MIPI");
+
+    if (False == linearizeBayer(width, height, bitDepth, offset, rgb16_size, rgb16_buffer))
+        printf("\nError in linearization");
 
     uint16 *R_channel, *G_channel, *B_channel;
     R_channel = malloc(rgb16_size);
@@ -213,6 +221,16 @@ uint8 decodeMIPItoWord(int width, int height, long int raw_size,
     return True;
 };
 
+uint8 linearizeBayer(int width, int height,
+    int bitDepth, int offset,
+    long int rgb16_size, uint16 *rgb16_buffer)
+{
+    long int i;
+    for (i = 0; i < width*height; i++){
+        *(rgb16_buffer + i)+=offset;
+    }
+    return True;
+}
 
 uint8 demosaicImageData(int width, int height,
     uint16 *rgb16_buffer,
