@@ -41,14 +41,22 @@ uint8 subsample2YUV420(int width, int height, long int YUV_size,
 uint8 writeFinalYUVImage(int width, int height,
     uint8 *Y_420, uint8 *UV_420);
 
-int main(int argv, char *argc[])
+int main(int argc, char *argv[])
 {
-    char *fileName = "IMG_Guitar.raw";
-    int width = 4224;
-    int height = 3136;
+    char *fileName;
+    char *defaultRaw = "IMG_Guitar.raw";
+    if (argv == 0)
+      fileName = defaultRaw;
+    else
+      fileName = argv[1];
+    printf("%s\n",fileName);
+    printf("%s\n",argv[0]);
+    printf("%d\n",argc);
+    int width = 4032;//4224;
+    int height = 3024;//3136;
     int bitDepth = 10;
 
-    int offset = -70;
+    int offset = -60;
 
     float CCM[9] = { 1.1000,-0.0500,-0.0500,
                     -0.1000, 1.2000,-0.1000,
@@ -167,7 +175,9 @@ int main(int argv, char *argc[])
     free(mipi_buffer);
 
     /*JPEG Convertion*/
-    system("ffmpeg -s 4224x3136 -pix_fmt nv12 -i Out.yuv guitar.jpg");
+    char ffmpegString[100]; /*= "ffmpeg -s 4224x3136 -pix_fmt nv12 -i Out.yuv guitar.jpg";*/
+    snprintf(ffmpegString,100,"ffmpeg -s %dx%d -pix_fmt nv12 -i Out.yuv guitar.jpg",width,height);
+    system(ffmpegString);
 
     /*Success*/
     return 1;
