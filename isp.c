@@ -3,11 +3,15 @@
 #include <string.h>
 #include <math.h>
 
+#define BGGR 1
+#define RGGB 2
+
 typedef unsigned char uint8;
 typedef unsigned short uint16;
 uint8 True = 1;
 uint8 False = 0;
 
+uint8 add8(uint8 x, uint8 y);
 long int findImageSize(char *fileName);
 uint8 readImage(char* fileName, long int raw_size, int width, int height,
     uint8 *mipi_buffer);
@@ -45,7 +49,7 @@ int main(int argc, char *argv[])
 {
     char *fileName;
     char *defaultRaw = "IMG_Guitar.raw";
-    if (argv == 0)
+    if (argc == 1)
       fileName = defaultRaw;
     else
       fileName = argv[1];
@@ -55,26 +59,34 @@ int main(int argc, char *argv[])
     int width = 4032;//4224;
     int height = 3024;//3136;
     int bitDepth = 10;
+    int bayerFormat = RGGB;
+    //int bayerFormat = BGGR;
 
-    int offset = -60;
+    int offset = -59;
+
+/*    float CCM[9] = { 1.1712,-0.1421,-0.0291,
+                    -0.2688, 1.3998,-0.1310,
+                    -0.0175,-0.5893, 1.6068};
+*/
 
     float CCM[9] = { 1.1000,-0.0500,-0.0500,
-                    -0.1000, 1.2000,-0.1000,
-                    -0.0000,-0.0000, 1.0000};
 
+                          -0.1000, 1.2000,-0.1000,
+
+                                              -0.0000,-0.0000, 1.0000};
 /*    float CCM[9] = {1,0,0,
                     0,1,0,
                     0,0,1};
 */
-    float gammaRValue = 2.5;
-    float gammaGValue = 2.5;
-    float gammaBValue = 2.5;
+    float gammaRValue = 1.7;
+    float gammaGValue = 1.6;
+    float gammaBValue = 1.7;
 
     short int window_size[2] = {3,3};
     short int window_height = window_size[0];
     short int window_width = window_size[1];
 
-    float R2G = 1.00;
+    float R2G = 0.60;
     float B2G = 1.00;
 
     long int raw_size;
@@ -101,9 +113,15 @@ int main(int argc, char *argv[])
     R_channel = malloc(rgb16_size);
     G_channel = malloc(rgb16_size);
     B_channel = malloc(rgb16_size);
-    if (False == demosaicImageData(width, height, rgb16_buffer,
+    if (bayerFormat == BGGR) {
+      if (False == demosaicImageData(width, height, rgb16_buffer,
         R_channel, G_channel, B_channel))
         printf("\nError in Demosaic");
+    } else if (bayerFormat == RGGB) {
+      if (False == demosaicImageData(width, height, rgb16_buffer,
+        B_channel, G_channel, R_channel))
+        printf("\nError in Demosaic");
+    }
 
     unsigned char *R_8channel;
     unsigned char *G_8channel;
@@ -182,6 +200,21 @@ int main(int argc, char *argv[])
     /*Success*/
     return 1;
 }
+
+
+uint8 add8(uint8 x, uint8 y)
+{
+  signed short temp;
+  temp = x + y;
+  if (temp > 255)
+    temp = 255;
+  else if (temp < 0)
+    temp = 0;
+  return temp;
+
+}
+
+
 long int findImageSize(char* fileName)
 {
     long int raw_size;
@@ -442,9 +475,9 @@ uint8 balanceWhite(int width, int height, float R2G, float B2G,
             pixR = (float)(*(R_8channel + (i*width) + j));
             pixG = (float)(*(B_8channel + (i*width) + j));
             pixB = (float)(*(G_8channel + (i*width) + j));
-            *(R_8channel + (i*width) + j) = pixR/R2G;
+            *(R_8channel + (i*width) + j) = /*(pixR/R2G > 255) ? 255:pixR/R2G;//((pixR/R2G > 255) ? 255:((pixR/R2G < 0) ? 0:pixR/R2G));*/pixR/R2G;
             *(G_8channel + (i*width) + j) = pixG;
-            *(B_8channel + (i*width) + j) = pixB/B2G;
+            *(B_8channel + (i*width) + j) = /*(pixB/B2G > 255) ? 255:pixR/R2G;//((pixB/B2G > 255) ? 255:((pixR/R2G < 0) ? 0:pixR/R2G)); */pixB/B2G;
         }
     }
     return True;
