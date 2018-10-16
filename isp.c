@@ -76,16 +76,16 @@ int main(int argc, char *argv[])
                     0,1,0,
                     0,0,1};
 */
-    float gammaRValue = 1.7;
-    float gammaGValue = 1.6;
+    float gammaRValue = 1.9;
+    float gammaGValue = 1.7;
     float gammaBValue = 1.7;
 
     short int window_size[2] = {3,3};
     short int window_height = window_size[0];
     short int window_width = window_size[1];
 
-    float R2G = 0.60;
-    float B2G = 1.00;
+    float R2G = 0.70;
+    float B2G = 0.80;
 
     long int raw_size;
     raw_size = findImageSize(fileName);
