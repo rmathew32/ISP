@@ -54,9 +54,6 @@ int main(int argc, char *argv[])
       fileName = defaultRaw;
     else
       fileName = argv[1];
-    printf("%s\n",fileName);
-    printf("%s\n",argv[0]);
-    printf("%d\n",argc);
     int width = 4032;//4224;
     int height = 3024;//3136;
     int bitDepth = 10;
